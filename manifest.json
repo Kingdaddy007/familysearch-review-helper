@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "FamilySearch Full Name Review Helper (Stage 1)",
+  "version": "0.2.1",
+  "description": "Local keyboard shortcuts and optional guarded Auto-Attach for FamilySearch Full Name Review.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.familysearch.org/*/getinvolved*",
+        "https://www.familysearch.org/getinvolved*",
+        "https://familysearch.org/*/getinvolved*",
+        "https://familysearch.org/getinvolved*"
+      ],
+      "js": ["dom-helpers.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
+

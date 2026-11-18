@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stage 1 Local Harness — FamilySearch Full Name Review</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .case-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .case-btn {
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .case-btn.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+    .metrics {
+      font-size: 12px;
+      background: #eef2ff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: ui-monospace, monospace;
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      min-height: calc(100vh - 54px);
+    }
+    .viewer {
+      position: relative;
+      padding: 28px;
+      background: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .doc-sheet {
+      position: relative;
+      width: 660px;
+      min-height: 360px;
+      background: #fdfcf7;
+      border: 1px solid #d1d5db;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      padding: 36px 40px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+      line-height: 2.2;
+      user-select: none;
+    }
+    .word-token {
+      position: relative;
+      display: inline-block;
+      padding: 2px 5px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .word-token.is-yellow {
+      background: rgba(253, 224, 71, 0.72);
+    }
+    .word-token.is-blue-selected {
+      background: rgba(56, 189, 248, 0.35);
+      outline: 2px dashed #0284c7;
+    }
+    .resize-box {
+      position: relative;
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(56, 189, 248, 0.35);
+      outline: 2px dashed #0284c7;
+    }
+    .resize-handle {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: #0284c7;
+      border-radius: 50%;
+      cursor: ew-resize;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+    .attach-popover {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 6px;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.14);
+      z-index: 20;
+    }
+    .attach-popover button {
+      background: #fff;
+      border: 1px solid #0284c7;
+      color: #0369a1;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sidebar {
+      background: #fff;
+      border-left: 1px solid #e5e7eb;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .step-label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
+    .step-title { font-size: 20px; font-weight: 700; margin: 0 0 12px; }
+    .circle-actions { display: flex; gap: 16px; margin: 18px 0; }
+    .circle-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 999px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-yes { background: #d9f99d; color: #365314; }
+    .btn-no { background: #fecdd3; color: #881337; }
+    .btn-unsure { background: #bae6fd; color: #0c4a6e; }
+    .text-action {
+      display: block;
+      margin: 8px 0;
+      background: none;
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: #0369a1;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+    }
+    .field-group { margin: 12px 0; }
+    .field-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .field-group input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #9ca3af;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .footer-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .btn-next {
+      background: #0369a1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-next:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+    .btn-done {
+      background: #047857;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    dialog {
+      border: 1px solid #9ca3af;
+      border-radius: 10px;
+      padding: 18px;
+      max-width: 360px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="case-tabs" id="case-tabs"></div>
+    <div>
+      <button type="button" class="case-btn" id="toggle-dialog-btn">Open Test Dialog</button>
+      <button type="button" class="case-btn" id="reset-case-btn">Reset Case</button>
+    </div>
+    <div class="metrics" id="metrics-bar">Clicks: 0 | Keys: 0 | Time: 0.0s</div>
+  </header>
+
+  <main class="workspace">
+    <section class="viewer">
+      <div class="doc-sheet" id="doc-sheet"></div>
+    </section>
+    <aside class="sidebar" id="sidebar"></aside>
+  </main>
+
+  <dialog id="sample-dialog">
+    <p><strong>Sample Dialog</strong> — Shortcuts must be ignored while this dialog is open.</p>
+    <button type="button" id="close-dialog-btn">Close Dialog</button>
+  </dialog>
+
+  <script>
+    window.CASES = [
+      {
+        id: 'case1',
+        label: 'Case 1: Complete (Yes)',
+        lines: [
+          [{ text: 'George', yellow: true }, { text: 'O.', yellow: true }, { text: 'Frost', yellow: true }]
+        ],
+        given: 'George O.',
+        surname: 'Frost',
+        mode: 'complete'
+      },
+      {
+        id: 'case2',
+        label: 'Case 2: Ready Word Box (O. W.)',
+        lines: [
+          [{ text: 'O. W.', target: true }, { text: 'Foster', yellow: true }, { text: 'Deputy', distractor: true }]
+        ],
+        given: 'O. W.',
+        surname: 'Foster',
+        mode: 'ready-word'
+      },
+      {
+        id: 'case3',
+        label: 'Case 3: Resizable Blue Box',
+        lines: [
+          [{ text: 'Ella K.', target: true, partialInitial: 'Ella', needsResize: true }, { text: 'Hadley', yellow: true }]
+        ],
+        given: 'Ella K.',
+        surname: 'Hadley',
+        mode: 'resize-box'
+      },
+      {
+        id: 'case4',
+        label: 'Case 4: Deputy Exclusion',
+        lines: [
+          [{ text: 'W. H. Phelps', distractor: true }, { text: 'Clerk', distractor: true }],
+          [{ text: 'O. W.', target: true }, { text: 'Foster', yellow: true }, { text: 'Deputy', distractor: true }]
+        ],
+        given: 'O. W.',
+        surname: 'Foster',
+        mode: 'distractor'
+      },
+      {
+        id: 'case5',
+        label: 'Case 5: Edit Fields & Done',
+        lines: [
+          [{ text: 'O. W.', yellow: true }, { text: 'Foster', yellow: true }]
+        ],
+        given: 'O. W',
+        surname: 'Foster',
+        mode: 'edit-done',
+        startStep: 3
+      }
+    ];
+
+    const appState = {
+      caseIdx: 0,
+      step: 1,
+      selectedTokenKey: null,
+      attachedKeys: new Set(),
+      detachedKeys: new Set(),
+      resized: false,
+      newHighlightMode: false,
+      completed: false,
+      clicks: 0,
+      keys: 0,
+      startTime: performance.now(),
+      endTime: null
+    };
+
+    function updateMetrics() {
+      const elapsed = ((appState.endTime || performance.now()) - appState.startTime) / 1000;
+      document.getElementById('metrics-bar').textContent =
+        `Clicks: ${appState.clicks} | Keys: ${appState.keys} | Time: ${elapsed.toFixed(1)}s | Completed: ${appState.completed}`;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.isTrusted || e.target.closest('.topbar') || e.target.closest('#fs-stage1-hud')) return;
+      appState.clicks += 1;
+      updateMetrics();
+    }, true);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      appState.keys += 1;
+      updateMetrics();
+    }, true);
+
+    function loadCase(idx) {
+      const c = window.CASES[idx];
+      appState.caseIdx = idx;
+      appState.step = c.startStep || 1;
+      appState.selectedTokenKey = null;
+      appState.attachedKeys = new Set();
+      appState.detachedKeys = new Set();
+      appState.resized = false;
+      appState.newHighlightMode = false;
+      appState.completed = false;
+      appState.clicks = 0;
+      appState.keys = 0;
+      appState.startTime = performance.now();
+      appState.endTime = null;
+      renderAll();
+    }
+
+    function renderTabs() {
+      const tabs = document.getElementById('case-tabs');
+      tabs.innerHTML = '';
+      window.CASES.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'case-btn' + (i === appState.caseIdx ? ' active' : '');
+        btn.textContent = c.label;
+        btn.addEventListener('click', () => loadCase(i));
+        tabs.appendChild(btn);
+      });
+    }
+
+    function renderDoc() {
+      const c = window.CASES[appState.caseIdx];
+      const sheet = document.getElementById('doc-sheet');
+      sheet.innerHTML = '';
+
+      c.lines.forEach((line, li) => {
+        const lineDiv = document.createElement('div');
+        line.forEach((tok, ti) => {
+          const key = `${li}-${ti}`;
+          const isAttached = (tok.yellow && !appState.detachedKeys.has(key)) || appState.attachedKeys.has(key);
+          const isSelected = appState.selectedTokenKey === key;
+
+          if (isSelected && tok.needsResize && !appState.resized) {
+            const box = document.createElement('span');
+            box.className = 'resize-box';
+            box.setAttribute('data-fs-selection-state', 'resizing');
+            box.setAttribute('data-needs-resize', 'true');
+            box.innerHTML = `<span>${tok.partialInitial}</span>`;
+
+            const handle = document.createElement('span');
+            handle.className = 'resize-handle';
+            handle.title = 'Click or drag to resize to full Ella K.';
+            handle.setAttribute('data-resize-handle', 'true');
+            handle.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              appState.resized = true;
+              renderDoc();
+            });
+            box.appendChild(handle);
+
+            const pop = document.createElement('div');
+            pop.className = 'attach-popover';
+            const attBtn = document.createElement('button');
+            attBtn.type = 'button';
+            attBtn.textContent = '✓ ATTACH';
+            attBtn.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              appState.attachedKeys.add(key);
+              appState.selectedTokenKey = null;
+              renderAll();
+            });
+            pop.appendChild(attBtn);
+            box.appendChild(pop);
+            lineDiv.appendChild(box);
+            const rest = document.createTextNode(' K. ');
+            lineDiv.appendChild(rest);
+            return;
+          }
+
+          const span = document.createElement('span');
+          span.className = 'word-token' + (isAttached ? ' is-yellow' : '') + (isSelected && !isAttached ? ' is-blue-selected' : '');
+          span.textContent = tok.text;
+          span.setAttribute('data-token-text', tok.text);
+
+          if (isSelected) {
+            const pop = document.createElement('div');
+            pop.className = 'attach-popover';
+            if (isAttached) {
+              const detBtn = document.createElement('button');
+              detBtn.type = 'button';
+              detBtn.textContent = '× DETACH';
+              detBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                appState.attachedKeys.delete(key);
+                appState.detachedKeys.add(key);
+                appState.selectedTokenKey = null;
+                renderAll();
+              });
+              pop.appendChild(detBtn);
+            } else {
+              if (!tok.needsResize) {
+                span.setAttribute('data-fs-ready-word-box', 'true');
+              }
+              const attBtn = document.createElement('button');
+              attBtn.type = 'button';
+              attBtn.textContent = '✓ ATTACH';
+              attBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                appState.detachedKeys.delete(key);
+                appState.attachedKeys.add(key);
+                appState.selectedTokenKey = null;
+                renderAll();
+              });
+              pop.appendChild(attBtn);
+            }
+            span.appendChild(pop);
+          }
+
+          span.addEventListener('click', () => {
+            if (appState.step !== 2) return;
+            appState.selectedTokenKey = key;
+            renderAll();
+          });
+
+          lineDiv.appendChild(span);
+          lineDiv.appendChild(document.createTextNode(' '));
+        });
+        sheet.appendChild(lineDiv);
+      });
+    }
+
+    function renderSidebar() {
+      const c = window.CASES[appState.caseIdx];
+      const sb = document.getElementById('sidebar');
+
+      if (appState.step === 1) {
+        sb.innerHTML = `
+          <div>
+            <div class="step-label">Full Name Review · Step 1 of 4</div>
+            <h2 class="step-title">Is the full name highlighted?</h2>
+            <div class="circle-actions">
+              <button type="button" class="circle-btn btn-yes">Yes</button>
+              <button type="button" class="circle-btn btn-no">No</button>
+              <button type="button" class="circle-btn btn-unsure">Unsure</button>
+            </div>
+          </div>
+          <div class="footer-nav">
+            <span></span>
+            <button type="button" class="btn-next" disabled>NEXT</button>
+          </div>
+        `;
+        sb.querySelector('.btn-yes').addEventListener('click', () => {
+          appState.step = 3;
+          renderAll();
+        });
+        sb.querySelector('.btn-no').addEventListener('click', () => {
+          appState.step = 2;
+          renderAll();
+        });
+        sb.querySelector('.btn-unsure').addEventListener('click', () => {
+          appState.step = 4;
+          renderAll();
+        });
+      } else if (appState.step === 2) {
+        sb.innerHTML = `
+          <div>
+            <div class="step-label">Full Name Review · Step 2 of 4</div>
+            <h2 class="step-title">Add or remove highlights to complete this person's full name.</h2>
+            <button type="button" class="text-action" id="btn-new-hl">NEW HIGHLIGHT ${appState.newHighlightMode ? '(Active)' : ''}</button>
+          </div>
+          <div class="footer-nav">
+            <button type="button" class="case-btn" id="btn-back">GO BACK</button>
+            <button type="button" class="btn-next" id="btn-next">NEXT</button>
+          </div>
+        `;
+        sb.querySelector('#btn-new-hl').addEventListener('click', () => {
+          appState.newHighlightMode = !appState.newHighlightMode;
+          renderSidebar();
+        });
+        sb.querySelector('#btn-back').addEventListener('click', () => {
+          appState.step = 1;
+          renderAll();
+        });
+        sb.querySelector('#btn-next').addEventListener('click', () => {
+          appState.step = 3;
+          renderAll();
+        });
+      } else if (appState.step === 3) {
+        sb.innerHTML = `
+          <div>
+            <div class="step-label">Full Name Review · Step 3 of 4</div>
+            <h2 class="step-title">Drag the name parts below to the correct label and order.</h2>
+            <div class="field-group">
+              <label for="given-input">Given Name:</label>
+              <input id="given-input" type="text" value="${c.given}" />
+            </div>
+            <div class="field-group">
+              <label for="surname-input">Surname:</label>
+              <input id="surname-input" type="text" value="${c.surname}" />
+            </div>
+          </div>
+          <div class="footer-nav">
+            <button type="button" class="case-btn" id="btn-back">GO BACK</button>
+            <button type="button" class="btn-next" id="btn-next">NEXT</button>
+          </div>
+        `;
+        sb.querySelector('#btn-back').addEventListener('click', () => {
+          appState.step = 2;
+          renderAll();
+        });
+        sb.querySelector('#btn-next').addEventListener('click', () => {
+          appState.step = 4;
+          renderAll();
+        });
+      } else {
+        sb.innerHTML = `
+          <div>
+            <div class="step-label">Full Name Review · Step 4 of 4</div>
+            <h2 class="step-title">Confirm and finish</h2>
+            <p>${appState.completed ? 'Review submitted (Done clicked manually).' : 'Click Done manually to submit.'}</p>
+          </div>
+          <div class="footer-nav">
+            <button type="button" class="case-btn" id="btn-back">GO BACK</button>
+            <button type="button" class="btn-done" id="btn-done">Done</button>
+          </div>
+        `;
+        sb.querySelector('#btn-back').addEventListener('click', () => {
+          appState.step = 3;
+          renderAll();
+        });
+        sb.querySelector('#btn-done').addEventListener('click', () => {
+          appState.completed = true;
+          appState.endTime = performance.now();
+          renderAll();
+        });
+      }
+    }
+
+    function renderAll() {
+      renderTabs();
+      renderDoc();
+      renderSidebar();
+      updateMetrics();
+    }
+
+    document.getElementById('reset-case-btn').addEventListener('click', () => loadCase(appState.caseIdx));
+    document.getElementById('toggle-dialog-btn').addEventListener('click', () => {
+      document.getElementById('sample-dialog').showModal();
+    });
+    document.getElementById('close-dialog-btn').addEventListener('click', () => {
+      document.getElementById('sample-dialog').close();
+    });
+
+    loadCase(0);
+  </script>
+  <script src="../dom-helpers.js"></script>
+  <script src="../content.js"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html><meta charset="utf-8"><title>Shortcut timing regression</title>
+<div id="review"></div><pre id="result"></pre>
+<script src="../dom-helpers.js"></script><script src="../content.js"></script>
+<script>
+window.addEventListener('load', async () => {
+  const review = document.querySelector('#review');
+  const result = document.querySelector('#result');
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const press = (key, repeat = false) => document.body.dispatchEvent(
+    new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, repeat })
+  );
+  const show = (step, button, click) => {
+    review.innerHTML = '<p>Step ' + step + ' of 4</p><button>' + button + '</button>';
+    review.querySelector('button').onclick = click;
+  };
+  const check = (name, passed) => result.append(name + ': ' + (passed ? 'PASS' : 'FAIL') + '\n');
+  let detach = 0;
+  show(2, '× Detach', () => detach++);
+  press('d');
+  check('D detaches on the same key event', detach === 1);
+
+  let finished = 0;
+  let advanced = 0;
+  const setup = () => show(3, 'Next', () => {
+    advanced++;
+    setTimeout(() => {
+      show(4, 'Done', () => finished++);
+      const done = review.querySelector('button');
+      done.disabled = true;
+      setTimeout(() => { done.disabled = false; }, 90);
+    }, 90);
+  });
+
+  document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  setup();
+  press('Enter');
+  press('Enter', true);
+  await delay(260);
+  check('Held Enter does not finish the review', advanced === 1 && finished === 0);
+  document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  setup();
+  press('Enter');
+  press('Enter');
+  await delay(260);
+  check('Two quick Enter presses advance and finish once (' + advanced + ', ' + finished + ')', advanced === 2 && finished === 1);
+
+  document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  setup();
+  press('Enter');
+  press('Enter');
+  document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  await delay(260);
+  check('Pointer interaction cancels a pending finish (' + advanced + ', ' + finished + ')', advanced === 3 && finished === 1);
+});
+</script>
+
+
